@@ -7,4 +7,4 @@ downloaded it is to rename it "DATA2" and change the source, then it should work
 
 You can download it here : http://files.data.gouv.fr/sirene/sirene_201710_L_M.zip
 
-Thanks
+Thanks :)
