@@ -1,6 +1,10 @@
+Dear professor,
+
 For TASK3-B
 
 We didn't manage to import the SIREN database in github, therefore the only requirement if you already
 downloaded it is to rename it "DATA2" and change the source, then it should work
 
 You can download it here : http://files.data.gouv.fr/sirene/sirene_201710_L_M.zip
+
+Thanks
