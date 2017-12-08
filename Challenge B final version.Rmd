@@ -1,0 +1,602 @@
+---
+title: "Challenge B"
+author: "Gnidehou Fabrice & Schmitt Philippe"
+date: "7 d?cembre 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+GITHUB ACCOUNT TO LOOK AT FOR THE CHALLENGE B: https://github.com/PhilippeSchmitt
+
+
+## Task 1B - Predicting house prices in Ames, Iowa
+
+#Step 1 : The machine learning method we choose is random Forest.
+
+It randomly samples elements of the predictor space, generates a bunch of decision trees and aggregates their predictions. As a result, it adds more diversity and reduce the trees' variance.
+
+#Step 2 : Let's train the Random Forest on the training data, but before doing it we prepare the data. 
+
+a/ We load the different packages
+```{r Libraryloading, echo = TRUE}
+load.libraries <- c('tidyverse','readr','randomForest','quantregForest','caret','plyr','np','caret','dplyr')
+install.lib <- load.libraries[!load.libraries %in% installed.packages()]
+for(libs in install.lib) install.packages(libs, dependencies = TRUE, repos = "https://cloud.r-project.org")
+sapply(load.libraries, require, character = TRUE)
+
+
+```
+
+b/ We load the train and test dataset
+```{r Dataloading, echo = TRUE}
+library(readr)
+train <- read_csv("V:/Challenge A/train.csv") # Do not forget to change the source :)
+test <- read_csv("V:/Challenge A/test.csv")
+
+```
+
+c/ We check for duplicated rows.
+
+```{r housing}
+# Check for duplicated rows.
+cat("The number of duplicated rows are", nrow(train) - nrow(unique(train)))
+
+```
+
+As We don't have duplicated rows we can directly go to the next step
+
+
+d/ We convert characters into factors
+
+```{r Transforming all character to factor for train, echo = TRUE}
+#Convert character to factors 
+train1 <- train[c(2:6,8:57,59:72,76:81)]
+
+character_vars <- lapply(train1, class) == "character"
+##We select variables which class is character
+train1[, character_vars] <- lapply(train1[, character_vars], as.factor)
+
+```
+
+e/ We replace missing data by the median or the mode according to their type
+
+```{r random forest}
+
+library(plyr)
+
+##We replace missing data by the median or the mode according to their type.
+##We delete those with more than 40% missing data. 
+
+train1$LotFrontage[is.na(train1$LotFrontage)] <- 69
+
+train1$MasVnrType[is.na(train1$MasVnrType)] <- "BrkFace"
+
+train1$MasVnrArea[is.na(train1$MasVnrArea)] <- 0       
+
+train1$BsmtQual[is.na(train1$BsmtQual)] <- "TA"      
+
+train1$BsmtCond[is.na(train1$BsmtCond)] <- "TA"      
+
+train1$BsmtExposure[is.na(train1$BsmtExposure)] <- "No"      
+
+train1$BsmtFinType1[is.na(train1$BsmtFinType1)] <- "Unf"      
+
+train1$BsmtFinType2[is.na(train1$BsmtFinType2)] <- "Unf"      
+
+train1$Electrical[is.na(train1$Electrical)] <- "SBrkr"      
+
+train1$GarageType[is.na(train1$GarageType)] <- "Attchd"      
+
+train1$GarageYrBlt[is.na(train1$GarageYrBlt)] <- 1977      
+
+train1$GarageFinish[is.na(train1$GarageFinish)] <- "Unf"     
+
+train1$GarageQual[is.na(train1$GarageQual)]<- "TA" 
+
+train1$GarageCond[is.na(train1$GarageCond)]<- "TA" 
+
+sapply(train1 , function(x)  sum(is.na(x)))# this show us the number of missing variables
+
+
+
+```
+
+f/ we train the random Forest on the training data
+
+```{r f}
+# We set seed at 1 to use the same data all along the project
+set.seed(1)
+attach(train1)
+random_forest1 <- randomForest(SalePrice ~ . , data = train1,na.action = na.roughfix)
+random_forest1
+# It generates 500 trees and try 24 variables at each split. 87.97% of the variations are explained by the random forest method.
+
+varImpPlot(random_forest1)
+# This show us the more important variables according to the random Forest method
+
+plot(random_forest1)
+# The more you have trees, the less error you get. 
+
+```
+
+# Step 3-A : We make predictions using the random forest method on the test file. 
+
+a/ We convert character variables into factors
+
+```{r Transforming all character to factor for test, echo = TRUE}
+# We delete variables with more than 40% of missing values
+test1 <- test[c(2:6,8:57,59:72,76:80)]
+
+character_vars1 <- lapply(test1, class) == "character"
+# We select variables which class is character
+test1[, character_vars1] <- lapply(test1[, character_vars1], as.factor)
+
+```
+
+b/ We replace missing data by the median or the mode according to their type and adjust the levels.
+
+```{r b}
+# We replace missing data by the median or the mode according to their type.
+
+library(plyr)
+
+##We do the same for test
+test1$MSZoning[is.na(test1$MSZoning)]<- "RL"
+test1$LotFrontage[is.na(test1$LotFrontage)]<- 67
+test1$Utilities[is.na(test1$Utilities)]<- "AllPub"
+test1$Exterior1st[is.na(test1$Exterior1st)]<- "VinylSd"
+test1$Exterior2nd[is.na(test1$Exterior2nd)]<- "VinylSd"
+test1$MasVnrType[is.na(test1$MasVnrType)]<- "None"
+test1$MasVnrArea[is.na(test1$MasVnrArea)]<- 0
+test1$BsmtQual[is.na(test1$BsmtQual)]<- "TA"
+test1$BsmtCond[is.na(test1$BsmtCond)]<- "TA"
+test1$BsmtExposure[is.na(test1$BsmtExposure)]<- "No"
+test1$BsmtFinType1[is.na(test1$BsmtFinType1)]<- "GLQ"
+test1$BsmtFinSF1[is.na(test1$BsmtFinSF1)]<- 350.5
+test1$BsmtFinType2[is.na(test1$BsmtFinType2)]<- "Unf"
+test1$BsmtFinSF2[is.na(test1$BsmtFinSF2)]<- 0
+test1$BsmtUnfSF[is.na(test1$BsmtUnfSF)]<- 460
+test1$TotalBsmtSF[is.na(test1$TotalBsmtSF)]<- 988
+test1$BsmtFullBath[is.na(test1$BsmtFullBath)]<- 0.4345
+test1$BsmtHalfBath[is.na(test1$BsmtHalfBath)]<- 0.0652
+test1$KitchenQual[is.na(test1$KitchenQual)]<- "TA"
+test1$Functional[is.na(test1$Functional)]<- "Typ"
+test1$GarageType[is.na(test1$GarageType)]<- "Attchd"
+test1$GarageYrBlt[is.na(test1$GarageYrBlt)]<- 1979
+test1$GarageFinish[is.na(test1$GarageFinish)]<- "Unf"
+test1$GarageCars[is.na(test1$GarageCars)]<- 2
+test1$GarageArea[is.na(test1$GarageArea)]<- 480
+test1$GarageQual[is.na(test1$GarageQual)]<- "TA"
+test1$GarageCond[is.na(test1$GarageCond)]<- "TA"
+test1$SaleType[is.na(test1$SaleType)]<- "WD"
+
+
+
+sapply(test1 , function(x)  sum(is.na(x)))# no NA :)
+
+
+##We adjust the levels
+
+levels(test1$MSZoning) <- levels(train1$MSZoning)
+levels(test1$Street) <- levels(train1$Street)
+levels(test1$LotShape) <- levels(train1$LotShape)
+levels(test1$LandContour) <- levels(train1$LandContour)
+levels(test1$Utilities) <- levels(train1$Utilities)
+levels(test1$LotConfig) <- levels(train1$LotConfig)
+levels(test1$LandSlope) <- levels(train1$LandSlope)
+levels(test1$Neighborhood) <- levels(train1$Neighborhood)
+levels(test1$Condition1) <- levels(train1$Condition1)
+levels(test1$Condition2) <- levels(train1$Condition2)
+levels(test1$BldgType) <- levels(train1$BldgType)
+levels(test1$HouseStyle) <- levels(train1$HouseStyle)
+levels(test1$RoofStyle) <- levels(train1$RoofStyle)
+levels(test1$RoofMatl) <- levels(train1$RoofMatl)
+levels(test1$Exterior1st) <- levels(train1$Exterior1st)
+levels(test1$Exterior2nd) <- levels(train1$Exterior2nd)
+levels(test1$MasVnrType) <- levels(train1$MasVnrType)
+levels(test1$ExterQual) <- levels(train1$ExterQual)
+levels(test1$ExterCond) <- levels(train1$ExterCond)
+levels(test1$Foundation) <- levels(train1$Foundation)
+levels(test1$BsmtQual) <- levels(train1$BsmtQual)
+levels(test1$BsmtCond) <- levels(train1$BsmtCond)
+levels(test1$BsmtExposure) <- levels(train1$BsmtExposure)
+levels(test1$BsmtFinType1) <- levels(train1$BsmtFinType1)
+levels(test1$BsmtFinType2) <- levels(train1$BsmtFinType2)
+levels(test1$Heating) <- levels(train1$Heating)
+levels(test1$HeatingQC) <- levels(train1$HeatingQC)
+levels(test1$CentralAir) <- levels(train1$CentralAir)
+levels(test1$Electrical) <- levels(train1$Electrical)
+levels(test1$KitchenQual) <- levels(train1$KitchenQual)
+levels(test1$Functional) <- levels(train1$Functional)
+levels(test1$GarageType) <- levels(train1$GarageType)
+levels(test1$GarageFinish) <- levels(train1$GarageFinish)
+levels(test1$GarageQual) <- levels(train1$GarageQual)
+levels(test1$GarageCond) <- levels(train1$GarageCond)
+levels(test1$PavedDrive) <- levels(train1$PavedDrive)
+levels(test1$SaleType) <- levels(train1$SaleType)
+levels(test1$SaleCondition) <- levels(train1$SaleCondition)
+```
+
+c/ Random Forests' predictions 
+
+```{r Random Forests Predictions}
+set.seed(1)
+# We make the predictions using the random forest method on the test file
+prediction_random_forest <- predict(random_forest1, test1)
+prediction_random_forest
+
+```
+
+d/ OLS predictions on the test file
+
+```{r OLS regression from test}
+set.seed(1)
+modelf <- lm(SalePrice ~ MSZoning + log(LotArea)+Street
+             +OverallQual+Neighborhood+Condition2+BldgType+OverallCond
+             + YearBuilt+ MasVnrArea+ TotalBsmtSF+ `1stFlrSF`
+             +`2ndFlrSF`+RoofMatl
+             +ExterQual+BsmtQual+BsmtExposure
+             +BedroomAbvGr +KitchenAbvGr+ +KitchenQual
+             +GarageArea +GarageQual+GarageCond
+             +PoolArea+SaleType , data = train1)
+
+# We use the regression made in challenge A
+
+```
+
+```{r Transforming all character to factor for test in OLS regression, echo = TRUE}
+# In order to clean the data we have to:
+# - replace missing data by the median or the mode according to their type.
+# - delete those with more than 40% missing data. 
+
+library(plyr)
+test2 <- test
+character_vars <- lapply(test2, class) == "character"
+##We select variables which class is character
+test2[, character_vars] <- lapply(test2[, character_vars], as.factor)
+
+test2$LotFrontage [is.na(test2$LotFrontage)] <- 67
+## We replaced all the missing values of LotFrontage  by its median.
+
+test2$Exterior2nd [is.na(test2$Exterior2nd )] <- "VinylSd"
+## We replaced all the missing values of Exterior2nd  by its mode.
+
+test2$Exterior1st[is.na(test2$Exterior1st)] <- "VinylSd"
+  ## We replaced all the missing values of Exterior1st by its mode.
+
+test2$MasVnrType[is.na(test2$MasVnrType)] <- "None"
+## We replaced all the missing values of  MasVnrType by its mode.
+
+test2$MasVnrArea [is.na(test2$MasVnrArea)] <- 0
+## We replaced all the missing values of MasVnrArea  by its median.
+
+test2$BsmtQual[is.na(test2$BsmtQual)] <- "TA"
+## We replaced all the missing values of BsmtQual by its mode.
+
+test2$BsmtCond[is.na(test2$BsmtCond)] <- "TA"
+## We replaced all the missing values of BsmtCond l by its mode.
+
+test2$BsmtExposure[is.na(test2$BsmtExposure)] <- "No"
+## We replaced all the missing values of BsmtExposure l by its mode.
+
+test2$BsmtFinType1[is.na(test2$BsmtFinType1)] <- "GLQ"
+## We replaced all the missing values of BsmtFinType1 l by its mode.
+
+test2$MSZoning[is.na(test2$MSZoning)] <- "RL"
+## We replaced all the missing values of MSZoning by its mode.
+
+test2$BsmtFinSF1 [is.na(test2$BsmtFinSF1 )] <- 350.5      
+## We replaced all the missing values of BsmtFinSF1  by its median 
+
+test2$BsmtFinSF2 [is.na(test2$BsmtFinSF2 )] <- 0      
+## We replaced all the missing values of  BsmtFinSF2  by its median.
+
+test2$BsmtUnfSF [is.na(test2$BsmtUnfSF )] <-  460.0   
+## We replaced all the missing values of  BsmtUnfSF  by its median.
+
+test2$TotalBsmtSF[is.na(test2$TotalBsmtSF)] <- 988      
+## We replaced all the missing values of TotalBsmtSF by its median.
+
+test2$BsmtFullBath[is.na(test2$BsmtFullBath)] <- 0     
+## We replaced all the missing values of BsmtFullBath by its median.
+
+test2$BsmtHalfBath[is.na(test2$BsmtHalfBath )] <-0     
+## We replaced all the missing values of BsmtHalfBath   by its median.
+
+test2$KitchenQual [is.na(test2$KitchenQual )] <-"TA"    
+## We replaced all the missing values of KitchenQual  by its mode.
+
+test2$GarageType[is.na(test2$GarageType)] <- "Attchd"    
+## We replaced all the missing values of  GarageType by its mode.
+
+test2$GarageYrBlt[is.na(test2$GarageYrBlt )] <- 1979   
+## We replaced all the missing values of  GarageYrBlt  by its median.
+
+test2$GarageFinish[is.na(test2$GarageFinish )] <- "Unf"  
+## We replaced all the missing values of  GarageFinish  by its mode.
+
+test2$GarageQual[is.na(test2$GarageQual)] <- "TA"   
+## We replaced all the missing values of  GarageQual  by its mode.
+
+test2$GarageCond[is.na(test2$GarageCond)] <- "TA"  
+## We replaced all the missing values of  GarageCond  by its mode.
+
+test2$GarageCars[is.na(test2$GarageCars)] <- 2     
+## We replaced all the missing values of GarageCars by its median.
+
+test2$GarageArea [is.na(test2$GarageArea)] <- 480  
+## We replaced all the missing values of GarageArea  by its median.
+
+test2$SaleType [is.na(test2$SaleType )]<- "WD"
+## We replaced all the missing values of GSaleType  by its mode 
+
+```
+
+
+```{r OLS prediciton on test.}
+set.seed(1)
+# We can now do predictions of the OLS model
+pred.f <- predict(modelf, test2)
+pred.f
+
+
+```
+
+
+#Step 3-B : We compare the random forest predictions to the previous linear regression on the test file
+
+```{r Comparison using MSE}
+MSE_randomforest <- (sum((prediction_random_forest-train1$SalePrice[1:1459])^2)/length(train1$SalePrice[1:1459]))
+MSE_randomforest
+##We compute the mean square of error for the RandomForest
+
+MSE_pred_OLS <- (sum((pred.f-train1$SalePrice[1:1459])^2)/length(train1$SalePrice[1:1459]))
+MSE_pred_OLS
+##We compute the mean square of error for the OLS predictions
+
+```
+
+
+The mean square of error of the random forest predictions is much more lower than the one of the linear OLS regression. We can conclude that in this case the random forest is more accurate for regressions than the OLS linear regression.
+
+
+## TASK 2B - Overfitting in Machine Learning (continued)
+
+Prerequisite steps are needed to create the data on which we will work on.
+
+```{r prerequisite, echo = FALSE, eval = FALSE, include = FALSE}
+
+library(tidyverse)
+library(np)
+library(caret)
+# The model is the following: y = x^3 + epsilon
+# Simulating an overfit
+
+set.seed(1)
+Nsim <- 150
+b <- c(0,1)
+x0 <- rep(1, Nsim)
+x1 <- rnorm(n = Nsim)
+
+X <- cbind(x0, x1^3)
+y.true <- X %*% b
+
+eps <- rnorm(n = Nsim)
+y <- X %*% b + eps
+
+df <- tbl_df(y[,1]) %>% rename(y = value) %>% bind_cols(tbl_df(x1)) %>% rename(x = value) %>% bind_cols(tbl_df(y.true[,1])) %>% rename(y.true = value)
+
+
+
+# Split sample into training and testing, 80%-20%
+training.index <- createDataPartition(y = y, times = 1, p = 0.8)
+df <- df %>% mutate(which.data = ifelse(1:n() %in% training.index$Resample1, "training", "test"))
+
+training <- df %>% filter(which.data == "training")
+test <- df %>% filter(which.data == "test")
+``` 
+
+
+# Question 1:
+```{r Question 1}
+set.seed(1)
+#Train local linear model y ~ x on training, using low flexibility (high bandwidth)
+ll.fit.lowflex <- npreg(y ~ x, data = training, method = "ll", bws = 0.5)
+summary(ll.fit.lowflex)
+```
+
+
+
+# Question 2:
+```{r Question 2}
+# Train local linear model y ~ x on training, using high flexibility (high bandwidth)
+ll.fit.highflex <- npreg(y ~ x, data = training, method = "ll", bws = 0.01)
+summary(ll.fit.highflex)
+
+
+# For later wee put them into the dataframe
+df <- df %>% mutate(y.ll.lowflex = predict(object = ll.fit.lowflex, newdata = df), y.ll.highflex = predict(object = ll.fit.highflex, newdata = df))
+training <- training %>% mutate(y.ll.lowflex = predict(object = ll.fit.lowflex, newdata = training), y.ll.highflex = predict(object = ll.fit.highflex, newdata = training))
+
+```
+
+# Question 3:
+```{r Question 3}
+set.seed(1)
+# We plot predictions on the training set
+ggplot(training) + geom_point(mapping = aes(x = x, y = y))  + 
+  geom_line(mapping = aes(x = x, y = y.ll.lowflex), color = "red",lwd=0.7)+ 
+  geom_line(mapping = aes(x = x, y = y.ll.highflex), color = "blue",lwd=0.7) +
+  geom_smooth(mapping = aes(x = x, y = y), color="black",se=FALSE)
+```
+
+# Question 4:
+
+The high flexibility model is more variable and has less bias compared to the low flexibility one. The blue curve varies more but is closer to real points than the red one. It also means blue curve got less bias.
+
+
+# Question 5:
+```{r Question 5}
+set.seed(1)
+# We put the predictions of the test data in the dataframe
+df <- df %>% mutate(y.ll.lowflex = predict(object = ll.fit.lowflex, newdata = df), y.ll.highflex = predict(object = ll.fit.highflex, newdata = df))
+test <- test %>% mutate(y.ll.lowflex = predict(object = ll.fit.lowflex, newdata = test), y.ll.highflex = predict(object = ll.fit.highflex, newdata = test))
+
+# Then we plot the predictions
+
+ggplot(test) + geom_point(mapping = aes(x = x, y = y))  + 
+  geom_line(mapping = aes(x = x, y = y.ll.highflex), color = "blue",lwd=0.7)+ 
+  geom_line(mapping = aes(x = x, y = y.ll.lowflex), color = "red",lwd=0.7) +
+  geom_smooth(mapping = aes(x = x, y = y), color="black",se=FALSE)
+
+```
+Here, once again the high flexibility model is more variable than the low flexibility one. However, the high flexibility model's bias has increased but it still remains the one with the smallest bias.
+
+# Question 6:
+```{r Question 6}
+# We create a vector of several bandwidth
+bw <- seq(0.01, 0.5, by = 0.001)
+
+```
+
+# Question 7:
+```{r Question 7}
+# Train local linear model on training with each bandwidth
+llbw.fit <- lapply(X = bw, FUN = function(bw) {npreg(y ~ x, data = training, method = "ll", bws = bw)})
+```
+
+# Question 8:
+```{r Question 8}
+
+# We define the initial regression and put it in our dataframe
+lm.fit <- lm(y ~ x, data = training)
+df <- df %>% mutate(y.lm = predict(object = lm.fit, newdata = df))
+
+
+# Compute for each bandwidth the MSE-training
+mse.training <- function(fit.model){
+  predictions <- predict(object = fit.model, newdata = training)
+  training %>% mutate(squared.error = (y - predictions)^2) %>% summarize(mse = mean(squared.error))
+}
+
+mse.train.results <- unlist(lapply(X = llbw.fit, FUN = mse.training))
+mse.train.results
+```
+
+# Question 9:
+```{r Question 9}
+# Same computations on test
+mse.test <- function(fit.model){
+  predictions <- predict(object = fit.model, newdata = test)
+  test %>% mutate(squared.error = (y - predictions)^2) %>% summarize(mse = mean(squared.error))
+}
+
+mse.test.results <- unlist(lapply(X = llbw.fit, FUN = mse.test))
+mse.test.results
+```
+
+# Question 10:
+
+```{r Question 10}
+# We first include the train and test's MSE into a table to plot them
+mse.df <- tbl_df(data.frame(bandwidth = bw, mse.train = mse.train.results, mse.test = mse.test.results))
+
+# Then plot their MSE
+ggplot(mse.df)+ 
+  geom_line(mapping = aes(x = bw, y = mse.train.results), color = "blue",lwd=0.7)+ 
+  geom_line(mapping = aes(x = bw, y = mse.test.results), color = "orange",lwd=0.7)
+```
+When the bandwidth increase, the MSE increases. For training data, they increase sharply for small bandwidth but then increase at a slower rate. On the contrary, the test data decrease in a first time, and increase step by stepwith larger bandwidth.
+Then for smaller samples, it is more accurate to use small bandwidth, mean squared errors will be minimized and for larger samples, using a bandwidth around 0.23 seems to be the one which gives the lowest mean squared errors.
+
+## TASK 3B - Privacy regulation compliance in France
+
+
+# Question 1
+```{r Question1, warning=FALSE, error=FALSE}
+library(data.table)
+
+DATA1.ff <- fread("V:/Challenge B/DATA1.csv") # Do not forget to change the source :)
+
+```
+
+# Question 2
+```{r Question2, warning=FALSE, error=FALSE,message=FALSE}
+library(tidyverse)
+library(stringr)
+
+# We first check for any duplicated rows
+cat("The number of duplicated rows are", nrow(DATA1.ff) - nrow(unique(DATA1.ff)))
+
+# We have 3 of them, then we delete them
+DATA1_bis <- DATA1.ff[!duplicated(DATA1.ff), ]
+
+## No more duplicated rows, then we count the number of CIL by department
+Dep <- str_sub(DATA1_bis$Code_Postal, start = 1, end = 2)
+# We create a variable Dep which take the values 01 to 99 for each observation 
+
+a <- c("01","02","03","04","05","06","07","08","09",10:99)
+b <- table(factor(Dep, levels =a))
+
+Nice_table <- data.frame(Departement= a, Number_of_organisation = b)
+Clean_table <- Nice_table[,c(1,3)]
+# Clean_table represents the number of CIL by department
+Clean_table
+
+```
+
+# Question 3
+
+ /!\ This step takes approximatively 10 to 15 minutes on the university's computers. /!\
+
+```{r Question3, warning=FALSE, error=FALSE, message=FALSE}
+library(data.table)
+
+# We import all the tables:
+
+DATA1.ff <- fread("V:/Challenge B/DATA1.csv") # Source may change for you
+class(DATA1.ff)
+str(DATA1.ff)
+
+DATA2.ff <- fread("C:/Challenge B/DATA2.csv") # Source may change for you
+class(DATA2.ff)
+str(DATA2.ff)
+
+######################################################################
+
+# To make the merge easier we change the name of "Siren" in DATA1.ff into "SIREN"
+colnames(DATA1.ff)[colnames(DATA1.ff)=="Siren"] <- "SIREN"
+
+# Changement of character variables into factors
+DATA1.ff <- data.frame(lapply(DATA1.ff, as.character), stringsAsFactors=FALSE)
+
+
+library(dplyr)
+
+DATA_INT <- inner_join( DATA1.ff, DATA2.ff, by="SIREN") # We merge the data of both database
+
+# We remove the duplicated rows if there are some.
+DATA_FINAL <- DATA_INT[!duplicated(DATA_INT), ]
+
+```
+
+We decided to use in the dplyr package, the inner_join function which returns all rows from DATA1 where there is a match with DATA2 according to the "by" parameters. It also returns all the columns from both data if there is a match but it there are multiple matches, all combination are returned, therefore we check for duplicated rows.
+
+# Question 4
+
+```{r Plot, warning=FALSE, error=FALSE}
+
+# We change the class of the variable categorie into factor to plot the histogram
+DATA_FINAL$CATEGORIE <- as.factor(DATA_FINAL$CATEGORIE)
+
+
+# We plot the histogram with the frequency in the y-axis
+barplot(prop.table(table(DATA_FINAL$CATEGORIE)))
+
+summary(DATA_FINAL$CATEGORIE)
+
+```
+
+The size of a company can belong to 4 differents groups: the large companies ( "GE" ), the medium size companies ( "PME" ),  the intermediate size companies ( "ETI" ) and the one on which we don't have informations ( " " ). This histogram show that around 75% of the CIL comes from the GE group, 16% belongs to ETI, 7% from the PME and 0.4% aren't from any of these groups. In other words it means that it is mainly the big companies that has representatives in France.
+
