@@ -1,4 +1,4 @@
-Fot TASK3-B
+For TASK3-B
 
 We didn't manage to import the SIREN database in github, therefore the only requirement if you already
 downloaded it is to rename it "DATA2" and change the source, then it should work
